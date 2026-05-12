@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Row Data Converter</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #202124;
+      --sub: #5f6368;
+      --line: #e1e5ea;
+      --brand: #a50034;
+      --brand-dark: #7b0027;
+      --soft: #fafbfc;
+      --success: #137333;
+      --warning: #b06000;
+      --danger: #b3261e;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .header {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 18px rgba(32, 33, 36, 0.06);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #fce7ef;
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+
+    .lead {
+      margin: 10px 0 0;
+      max-width: 820px;
+      color: var(--sub);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: block;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(32, 33, 36, 0.05);
+    }
+
+    .upload-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 180px;
+      border: 2px dashed #c8d0d8;
+      border-radius: 16px;
+      background: var(--soft);
+      text-align: center;
+      cursor: pointer;
+      padding: 24px;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    }
+
+    .upload-box:hover,
+    .upload-box.dragover {
+      border-color: var(--brand);
+      background: #fff7fa;
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #fce7ef;
+      color: var(--brand);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .upload-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .upload-desc {
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    input[type="file"] { display: none; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      min-height: 42px;
+      padding: 0 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--brand-dark); }
+
+    .btn-secondary {
+      background: #eef1f4;
+      color: #30343b;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fbfcfd;
+      color: var(--sub);
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+
+    .status.ok {
+      border-color: #b8e6c5;
+      background: #f1fbf4;
+      color: var(--success);
+    }
+
+    .status.warn {
+      border-color: #f8dc9c;
+      background: #fff8e8;
+      color: var(--warning);
+    }
+
+    .status.error {
+      border-color: #f2b8b5;
+      background: #fff4f3;
+      color: var(--danger);
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    .preview-head h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .preview-note {
+      margin: 0;
+      color: var(--sub);
+      font-size: 12px;
+    }
+
+    .table-shell {
+      width: 100%;
+      max-height: 430px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      max-width: 240px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f6f8fa;
+      font-weight: 700;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    th:last-child, td:last-child { border-right: 0; }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 880px) {
+      .card, .header { border-radius: 16px; padding: 18px; }
+      .actions { flex-direction: column; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>Row Data Converter</h1>
+      <p class="lead">
+        Upload the Raw Data file. It is based on ptt row data.
+      </p>
+    </header>
+
+    <section class="layout">
+      <div class="card">
+        <label class="upload-box" id="dropzone" for="fileInput">
+          <span class="upload-icon">↑</span>
+          <span class="upload-title">Upload Raw Data</span>
+          <span class="upload-desc">Supported formats: .xlsb, .xlsx, .xls, .csv<br>Click here or drag and drop a file.</span>
+        </label>
+        <input id="fileInput" type="file" accept=".xlsb,.xlsx,.xls,.csv" />
+
+        <div class="actions">
+          <button class="btn-primary" id="downloadBtn" disabled>Download CSV</button>
+          <button class="btn-secondary" id="resetBtn" disabled>Reset</button>
+        </div>
+
+        <div id="status" class="status">Please upload a Raw Data file.</div>
+
+        <div id="previewArea" class="hidden">
+          <div class="preview-head">
+            <h2>Preview</h2>
+            <p class="preview-note">Up to 30 rows are shown. The downloaded CSV includes all converted rows.</p>
+          </div>
+          <div class="table-shell">
+            <table id="previewTable"></table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+<script>
+(() => {
+  const OUTPUT_HEADERS = [
+    'Region',
+    'Project Name',
+    'LDM assigned date (GMT+8)',
+    'PTT submit date',
+    'PTT Task ID',
+    'Target staging date',
+    'Target publishing date',
+    'Actual staging date',
+    'Task Status in PTT',
+    'Off. subtype',
+    'Model Name',
+    'Pg#',
+    'Submission Date',
+    "LDM's approval date",
+    'Live URL',
+    'Actual Publishing Date',
+    'BU Request Date',
+    'Last comment date',
+    'QA Review Time',
+    'STG link created date'
+  ];
+
+  const fileInput = document.getElementById('fileInput');
+  const dropzone = document.getElementById('dropzone');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusBox = document.getElementById('status');
+  const previewArea = document.getElementById('previewArea');
+  const previewTable = document.getElementById('previewTable');
+
+  let csvText = '';
+  let downloadFileName = 'GR_signal_row_data.csv';
+
+  const normalizeHeader = (value) => String(value ?? '')
+    .replace(/^\uFEFF/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  const normalizeLoose = (value) => normalizeHeader(value).replace(/[^a-z0-9#]/g, '');
+
+  const setStatus = (message, type = '') => {
+    statusBox.className = `status ${type}`.trim();
+    statusBox.textContent = message;
+  };
+
+  const cleanCell = (value) => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'number') return String(value);
+    return String(value).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  };
+
+
+  // Example: GR26-W07-HS-aaa-bbb -> aaa bbb
+  const cleanModelNameForOutput = (value) => {
+    const modelName = cleanCell(value);
+    return modelName
+      .replace(/^GR[^-]*-[^-]*-[^-]*-/i, '')
+      .replace(/-/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const csvEscape = (value) => {
+    const text = cleanCell(value);
+    if (/[",\n]/.test(text)) return '"' + text.replace(/"/g, '""') + '"';
+    return text;
+  };
+
+  const makeCsv = (rows) => {
+    const lines = [];
+    lines.push(OUTPUT_HEADERS.map(csvEscape).join(','));
+    rows.forEach(row => {
+      lines.push(OUTPUT_HEADERS.map(header => csvEscape(row[header])).join(','));
+    });
+    return '\uFEFF' + lines.join('\r\n');
+  };
+
+  const buildHeaderMap = (row) => {
+    const map = new Map();
+    Object.keys(row || {}).forEach(key => {
+      map.set(normalizeHeader(key), key);
+      map.set(normalizeLoose(key), key);
+    });
+    return map;
+  };
+
+  const getValueByHeader = (row, header, headerMap) => {
+    const exactKey = headerMap.get(normalizeHeader(header));
+    if (exactKey !== undefined) return row[exactKey];
+
+    const looseKey = headerMap.get(normalizeLoose(header));
+    if (looseKey !== undefined) return row[looseKey];
+
+    return '';
+  };
+
+  const escapeHtml = (text) => String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const renderPreview = (rows) => {
+    const previewRows = rows.slice(0, 30);
+    const thead = '<thead><tr>' + OUTPUT_HEADERS.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead>';
+    const tbody = '<tbody>' + previewRows.map(row => {
+      return '<tr>' + OUTPUT_HEADERS.map(h => {
+        const value = cleanCell(row[h]);
+        return `<td title="${escapeHtml(value)}">${escapeHtml(value)}</td>`;
+      }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+    previewTable.innerHTML = thead + tbody;
+    previewArea.classList.remove('hidden');
+  };
+
+  const convertWorkbook = (workbook, originalName) => {
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, {
+      defval: '',
+      raw: false,
+      blankrows: false
+    });
+
+    if (!rawRows.length) {
+      throw new Error('No data was found in the uploaded file.');
+    }
+
+    const outputRows = [];
+    let hasModelColumn = false;
+
+    rawRows.forEach(row => {
+      const headerMap = buildHeaderMap(row);
+      const modelNameValue = getValueByHeader(row, 'Model Name', headerMap) || getValueByHeader(row, 'ModelName', headerMap);
+      const modelName = cleanCell(modelNameValue);
+
+      if (headerMap.has(normalizeHeader('Model Name')) || headerMap.has(normalizeHeader('ModelName')) || headerMap.has(normalizeLoose('Model Name'))) {
+        hasModelColumn = true;
+      }
+
+      if (!modelName.toUpperCase().startsWith('GR')) return;
+
+      const out = {};
+      OUTPUT_HEADERS.forEach(header => {
+        out[header] = getValueByHeader(row, header, headerMap);
+      });
+      out['Model Name'] = cleanModelNameForOutput(modelName);
+      outputRows.push(out);
+    });
+
+    if (!outputRows.length) {
+      const hint = hasModelColumn ? '' : '\nPlease check whether the file has a Model Name column.';
+      throw new Error('No rows were found where Model Name starts with GR.' + hint);
+    }
+
+    csvText = makeCsv(outputRows);
+    const baseName = originalName.replace(/\.[^.]+$/, '');
+    downloadFileName = `${baseName}_GR_signal.csv`;
+
+    renderPreview(outputRows);
+    downloadBtn.disabled = false;
+    resetBtn.disabled = false;
+    setStatus(`Conversion complete.\nRaw Data rows: ${rawRows.length.toLocaleString()}\nGR rows: ${outputRows.length.toLocaleString()}\nOutput columns: ${OUTPUT_HEADERS.length}`, 'ok');
+  };
+
+  const handleFile = (file) => {
+    if (!file) return;
+
+    setStatus('Reading file...');
+    downloadBtn.disabled = true;
+    resetBtn.disabled = false;
+    csvText = '';
+    previewTable.innerHTML = '';
+    previewArea.classList.add('hidden');
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+        convertWorkbook(workbook, file.name);
+      } catch (error) {
+        setStatus(error.message || 'An error occurred during conversion.', 'error');
+      }
+    };
+    reader.onerror = () => setStatus('The file could not be read.', 'error');
+    reader.readAsArrayBuffer(file);
+  };
+
+  fileInput.addEventListener('change', event => handleFile(event.target.files[0]));
+
+  ['dragenter', 'dragover'].forEach(type => {
+    dropzone.addEventListener(type, event => {
+      event.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(type => {
+    dropzone.addEventListener(type, event => {
+      event.preventDefault();
+      dropzone.classList.remove('dragover');
+    });
+  });
+
+  dropzone.addEventListener('drop', event => {
+    const file = event.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!csvText) return;
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    csvText = '';
+    previewTable.innerHTML = '';
+    previewArea.classList.add('hidden');
+    downloadBtn.disabled = true;
+    resetBtn.disabled = true;
+    setStatus('Please upload a Raw Data file.');
+  });
+})();
+</script>
+</body>
+</html>
