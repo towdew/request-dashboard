@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Row Data Converter</title>
+  <title>GR Signal CSV Converter</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -272,9 +272,10 @@
 <body>
   <main class="page">
     <header class="header">
-      <h1>Row Data Converter</h1>
+      <div class="eyebrow">CSV Generator</div>
+      <h1>GR Signal CSV Converter</h1>
       <p class="lead">
-        Upload the Raw Data file. It is based on ptt row data.
+        Upload the Raw Data file. This tool keeps only rows where <b>Super Category is “Appliance”</b> and <b>Model Name starts with “GR”</b>, then creates a CSV using the same columns as the Signal row data sample. The Model Name prefix is removed in the output, and remaining hyphens are converted to spaces.
       </p>
     </header>
 
@@ -443,16 +444,26 @@
 
     const outputRows = [];
     let hasModelColumn = false;
+    let hasSuperCategoryColumn = false;
+    let applianceRows = 0;
 
     rawRows.forEach(row => {
       const headerMap = buildHeaderMap(row);
       const modelNameValue = getValueByHeader(row, 'Model Name', headerMap) || getValueByHeader(row, 'ModelName', headerMap);
       const modelName = cleanCell(modelNameValue);
+      const superCategoryValue = getValueByHeader(row, 'Super Category', headerMap) || getValueByHeader(row, 'SuperCategory', headerMap);
+      const superCategory = cleanCell(superCategoryValue);
 
       if (headerMap.has(normalizeHeader('Model Name')) || headerMap.has(normalizeHeader('ModelName')) || headerMap.has(normalizeLoose('Model Name'))) {
         hasModelColumn = true;
       }
 
+      if (headerMap.has(normalizeHeader('Super Category')) || headerMap.has(normalizeHeader('SuperCategory')) || headerMap.has(normalizeLoose('Super Category'))) {
+        hasSuperCategoryColumn = true;
+      }
+
+      if (superCategory.toLowerCase() !== 'appliance') return;
+      applianceRows += 1;
       if (!modelName.toUpperCase().startsWith('GR')) return;
 
       const out = {};
@@ -470,7 +481,7 @@
 
     csvText = makeCsv(outputRows);
     const baseName = originalName.replace(/\.[^.]+$/, '');
-    downloadFileName = `${baseName}_GR_signal.csv`;
+    downloadFileName = `${baseName}_Appliance_GR_signal.csv`;
 
     renderPreview(outputRows);
     downloadBtn.disabled = false;
